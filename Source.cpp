@@ -2,7 +2,6 @@
 #include <iostream>
 
 using namespace std;
-
 #define buf_size 1024
 
 int main() {
@@ -11,23 +10,21 @@ int main() {
 	char buffer[buf_size];
 	DWORD num_byte;
 
-	pipe1 = CreateFile(
-		"\\\\.\\pipe\\pipe1", 
-		GENERIC_READ | GENERIC_WRITE,
-		0,
-		NULL,
-		OPEN_EXISTING,
-		0,
+	pipe1 = CreateNamedPipe(
+		"\\\\.\\pipe\\pipe1",
+		PIPE_ACCESS_DUPLEX,
+		PIPE_TYPE_MESSAGE | PIPE_READMODE_BYTE | PIPE_WAIT,
+		PIPE_UNLIMITED_INSTANCES,
+		buf_size,
+		buf_size,
+		NMPWAIT_USE_DEFAULT_WAIT,
 		NULL
 	);
 
-	cin >> buffer;
+	cout << "pipe created" << endl;
 
-	BOOL write1 = WriteFile(
+	ConnectNamedPipe(
 		pipe1,
-		buffer,
-		sizeof(buffer),
-		&num_byte,
 		NULL
 	);
 
@@ -41,7 +38,54 @@ int main() {
 
 	cout << "Message: " << buffer << endl;
 
+	strcpy(buffer, "   comp_eng   ");
+
+	BOOL write1 = WriteFile(
+		pipe1,
+		buffer,
+		sizeof(buffer),
+		&num_byte,
+		NULL
+	);
+
 	CloseHandle(pipe1);
 
-	return 0;
+
+	HANDLE FileMap;
+	BOOL Result;
+	PCHAR lpBuffer = NULL;
+	char Buffer[buf_size] = "Hello from Computer Engineering Server";
+	size_t bufferSize = sizeof(Buffer);
+
+	// Open File Mapping 
+	FileMap = OpenFileMapping(
+		FILE_MAP_ALL_ACCESS,
+		FALSE,
+		L"Local\\MyFileMap"
+	);
+
+	if (FileMap == NULL) {
+		cout << "OpenFileMapping Failed  " << GetLastError() << endl;
+	}
+
+	cout << "OpenFileMapping Success  " << endl;
+
+	cout << "Data from the server ->  " << lpBuffer << endl;
+
+	if (lpBuffer == NULL) {
+		cout << "MapViewOfFile Failed  " << GetLastError() << endl;
+	}
+
+	cout << "MapViewOfFile Success  " << endl;
+
+	// UnmapViewOfFile
+	Result = UnmapViewOfFile(lpBuffer);
+	if (Result == FALSE) {
+		cout << "UnmapViewOfFile Failed" << GetLastError() << endl;
+	}
+
+	cout << "UnmapViewOfFile Success" << endl;
+
+	CloseHandle(FileMap);
+
 }
